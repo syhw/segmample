@@ -65,14 +65,6 @@ class CRP:
 def search_before_after(line, j, k):
     """Search for "k"-level boundaries before and after "j" in "line". """
     # TODO memoize (by removing line for "i" maybe)
-#   inds = integers[line >= k]
-#   current = inds.searchsorted(j)
-#   before = 0
-#   after = len(line) + 1
-#   if current > 0:
-#       before = inds[current-1] + 1
-#   if current < len(inds):
-#       after = inds[current] + 1
     before = 0
     for cur in xrange(j-1, -1, -1):
         if line[cur] >= k:
@@ -87,7 +79,7 @@ def search_before_after(line, j, k):
 
 
 
-def segment(data, nlvls=3, niter=100):
+def sample_and_segment(data, nlvls=2, niter=100):
     """Samples for "niter" with "nlvls" or CRP and segments data.
 
     We initialize by assuming that each line is starter by a "nlvls" boundary
@@ -139,6 +131,7 @@ def segment(data, nlvls=3, niter=100):
 
     crps = [None] + [CRP() for i in xrange(nlvls)]  # [None]=>indices alignment
     segmentation = [np.zeros(len(l)-1, dtype='int32') for l in data]
+    ### This part is sample
     for iteration_number in xrange(niter):
         print "starting iteration:", iteration_number
         start_t = time.time()
@@ -172,7 +165,6 @@ def segment(data, nlvls=3, niter=100):
                         crps[lvl].addCustomer(twowords[1])
                     else:
                         crps[lvl].addCustomer(oneword)
-
         if DEBUG:
             for lvl, crp in enumerate(crps):
                 if crp != None:
@@ -184,12 +176,16 @@ def segment(data, nlvls=3, niter=100):
             print "table at lvl:", lvl
             print crp._tables
 
+    ### This part is segment
+
+
+
 
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='segmampler version 0.1')
     dataset = []
     with open(arguments['<file_to_segment.ylt>']) as f:
         dataset = map(lambda s: s.rstrip('\n').split(), f.readlines())
-    segment(dataset)
+    sample_and_segment(dataset)
 
 

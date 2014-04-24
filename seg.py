@@ -20,11 +20,20 @@ MAX_LEN_SENTENCE = 512
 #integers = np.arange(MAX_LEN_SENTENCE)
 
 
+class DummyCRP:
+    def predProb(self, _):
+        return 1.
+
+
 class CRP:
-    def __init__(self, alpha=1.):
+    def __init__(self, aboveLevel=None, alpha=1.):
         self._alpha = alpha * 1.0  # just to be sure it's a float
         self._tables = defaultdict(lambda: 0)  # number of customers at table
         self._sum = self._alpha  # includes alpha
+        self._aboveLevel = DummyCRP()
+        if aboveLevel != None:
+            assert hasattr(aboveLevel, "predProb")
+            self._aboveLevel = aboveLevel
 
     def addCustomer(self, table):
         self._tables[table] += 1
@@ -42,12 +51,21 @@ class CRP:
         return False
 
     def prob(self, table):
-        return self._tables[table] / self._sum
+        # TODO check
+        return (self._tables[table] + self._alpha
+                * self._baseProb(table)) / self._sum 
 
     def _new_table_prob(self):
         return self._alpha / self._sum
 
+    def _baseProb(self, table):
+        return self._aboveLevel.predProb(table)
+
     def predProb(self, table):
+        """Computes the predictive probability of siting a customer at "table":
+        P(customer@table | tables) = (counts(customers@table) + alpha
+                                      * baseProb(customer@table) / (alpha + n)
+        """
         if table in self._tables:
             return self.prob(table)
         else:
@@ -92,23 +110,14 @@ def sample_and_segment(data, nlvls=2, niter=100):
                 remove B by setting B=0 and updating the CRPs accordingly
             sample a boundary B=L here prop. to the joint on CRPs   [TODO]
 
-    Variant 2:
+    Variant 2 (that we are doing):
     for each level L (in ascending order)
         for each boundary B
             if B < L-1:
                 continue  # we don't sample if there is no lower-level boundary
             if B > L-1:
                 remove B by setting B=L-1 and updating CRPs[>=L] accordingly
-            sample a boundary B=L here prop. to CRP[L].predProb
-
-    Variant 3:
-    for each level L (in ascending order)
-        for each boundary B
-            if B < L-1:
-                continue  # we don't sample if there is no lower-level boundary
-            if B > L-1:
-                remove B by setting B=L-1 and updating CRPs[>=L] accordingly
-            sample a boundary B=L here prop. to joint CRP[>=L]   [TODO]
+            sample a boundary B=L here prop. to joint CRP[>=L]
 
     Examples with 2 levels (L in {1, 2}),
     init:
@@ -118,7 +127,7 @@ def sample_and_segment(data, nlvls=2, niter=100):
     update at lvl L=1 for the boundary in brackets:
       y   u w a n t t u s i D 6 b U k
        [0] 0 0 0 0 0 0 0 0 0 0 0 0 0
-     iterating:
+    iterating:
       y   u w a n t t u s i D 6 b U k
        [0] 0 0 0 0 0 0 0 0 0 0 0 0 0 (prob = 1./2)
       y u   w a n t t u s i D 6 b U k
@@ -127,9 +136,17 @@ def sample_and_segment(data, nlvls=2, niter=100):
        0 1 [0] 0 0 0 0 0 0 0 0 0 0 0 (prob = 1./3)
       y u w a   n t t u s i D 6 b U k
        0 1 0 [0] 0 0 0 0 0 0 0 0 0 0 (prob = 1./3)
+    TODO
     """
 
-    crps = [None] + [CRP() for i in xrange(nlvls)]  # [None]=>indices alignment
+    crps = []
+    for i in xrange(nlvls):
+        if i == 0:
+            crps.append(CRP())
+        else:
+            crps.append(CRP(crps[i-1]))
+    crps.reverse()
+    crps = [None] + crps # concat [None] at head for easier indices alignment
     segmentation = [np.zeros(len(l)-1, dtype='int32') for l in data]
     ### This part is sample
     for iteration_number in xrange(niter):

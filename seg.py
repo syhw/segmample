@@ -1,4 +1,4 @@
-#!/urs/local/bin/python
+#!/usr/local/bin/python
 """Bayesian CRP blocked sampling segmenter.
 
 Usage:
@@ -97,7 +97,7 @@ def search_before_after(line, j, k):
 
 
 
-def sample_and_segment(data, nlvls=2, niter=100):
+def sample_and_segment(data, nlvls=4, niter=100):
     """Samples for "niter" with "nlvls" or CRP and segments data.
 
     We initialize by assuming that each line is starter by a "nlvls" boundary
@@ -191,6 +191,7 @@ def sample_and_segment(data, nlvls=2, niter=100):
     for lvl, crp in enumerate(crps):
         if crp != None:
             print "table at lvl:", lvl
+            #print filter(lambda (k,v): v>100, crp._tables.iteritems())
             print crp._tables
 
     ### This part is segment

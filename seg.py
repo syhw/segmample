@@ -2,7 +2,7 @@
 """Bayesian CRP blocked sampling segmenter.
 
 Usage:
-    seg.py <file_to_segment.ylt>
+    seg.py <file_to_segment.ylt> [--iters=niterations]
 
 Options:
     -h --help     Show this screen.
@@ -52,8 +52,9 @@ class CRP:
 
     def prob(self, table):
         # TODO check
-        return (self._tables[table] + self._alpha
-                * self._baseProb(table)) / self._sum 
+        return (self._tables[table] / self._sum)
+        #return (self._tables[table] + self._alpha
+        #        * self._baseProb(table)) / self._sum 
 
     def _new_table_prob(self):
         return self._alpha / self._sum
@@ -64,12 +65,14 @@ class CRP:
     def predProb(self, table):
         """Computes the predictive probability of siting a customer at "table":
         P(customer@table | tables) = (counts(customers@table) + alpha
-                                      * baseProb(customer@table) / (alpha + n)
+                                      * baseProb(customer@table)) / (alpha + n)
         """
         if table in self._tables:
             return self.prob(table)
         else:
-            return self._new_table_prob()
+            #return self._new_table_prob() * self._baseProb(table)
+            # TODO check
+            return self._alpha * self._baseProb(table)
 
     def verify(self):
         "Checks that everytime something is added or removed, sum is updated."
@@ -173,7 +176,7 @@ def sample_and_segment(data, nlvls=4, niter=100):
                     oneword = ''.join(data[i][before:after])
                     twowords = (''.join(data[i][before:j+1]),
                             ''.join(data[i][j+1:after]))
-                    without_b = crps[lvl].predProb(oneword)
+                    without_b = crps[lvl].predProb(oneword)  # without boundary
                     with_b = crps[lvl].predProb(twowords[0]) * \
                             crps[lvl].predProb(twowords[1])
                     if random.random() > with_b/(without_b + with_b):
@@ -195,15 +198,35 @@ def sample_and_segment(data, nlvls=4, niter=100):
             print crp._tables
 
     ### This part is segment
-
-
+    # using just the last sample
+    # TODO: minimum Bayes risk decoding (MAP over the CRPs distributions)
+    ret = []
+    for lvl in xrange(1, nlvls+1):
+        corpus = []
+        for i, line in enumerate(segmentation):
+            prev_b = 0
+            sentence = []
+            for j, b_lvl in enumerate(line):
+                if b_lvl >= lvl:
+                    sentence.append(''.join(data[i][prev_b:j+1]))
+                    prev_b = j+1
+            sentence.append(''.join(data[i][prev_b:]))
+            corpus.append(sentence)
+        ret.append(corpus)
+    return ret
 
 
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='segmampler version 0.1')
     dataset = []
-    with open(arguments['<file_to_segment.ylt>']) as f:
+    fname = arguments['<file_to_segment.ylt>']
+    niter = 10
+    if arguments['--iters'] != None:
+        niter = int(arguments['--iters'])
+    with open(fname) as f:
         dataset = map(lambda s: s.rstrip('\n').split(), f.readlines())
-    sample_and_segment(dataset)
-
+    segmented = sample_and_segment(dataset, niter=niter)
+    for level, seg in enumerate(segmented):
+        with open(fname.split('.')[0] + '_' + str(level) + '.seg', 'w') as wf:
+            wf.write('\n'.join(map(lambda l: ' '.join(l), seg)))
 

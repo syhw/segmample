@@ -49,7 +49,7 @@ cpdef sample_and_segment(data, int nlvls=4, int niter=100):
     see seg.py's documentation
     """
 
-    cdef IND_t i, j
+    cdef IND_t i, j, iteration_number
     crps = []
     for i in range(nlvls):
         if i == 0:
@@ -94,9 +94,9 @@ cpdef sample_and_segment(data, int nlvls=4, int niter=100):
                     oneword = ''.join(data[i][ba.before:ba.after])
                     twowords = (''.join(data[i][ba.before:j+1]),
                             ''.join(data[i][j+1:ba.after]))
-                    without_b = crps[lvl].predProb(oneword)
-                    with_b = crps[lvl].predProb(twowords[0]) * \
-                            crps[lvl].predProb(twowords[1])
+                    without_b = crps[lvl].predProb(oneword)  # without boundary
+                    with_b = (crps[lvl].predProb(twowords[0]) *
+                            crps[lvl].predProb(twowords[1])) # TODO correct
                     if random.random() > with_b/(without_b + with_b):
                         line[j] = lvl
                         crps[lvl].addCustomer(twowords[0])
@@ -110,4 +110,26 @@ cpdef sample_and_segment(data, int nlvls=4, int niter=100):
             print crp._tables
 
     ### This part is segment
+    # using just the last sample
+    # TODO: minimum Bayes risk decoding (MAP over the CRPs distributions)
+    ret = []
+    cdef int prev_b
+    for lvl in range(1, nlvls+1):
+        corpus = []
+        for i, line in enumerate(segmentation):
+            prev_b = 0
+            sentence = []
+            print data[i]
+            for j, b_lvl in enumerate(line):
+                print [k for k in line]
+                if b_lvl == max_int:
+                    break
+                if b_lvl >= lvl:
+                    sentence.append(''.join(data[i][prev_b:j+1]))
+                    prev_b = j+1
+            sentence.append(''.join(data[i][prev_b:]))
+            corpus.append(sentence)
+        ret.append(corpus)
+    return ret
+
 

@@ -72,7 +72,8 @@ class CRP:
         else:
             #return self._new_table_prob() * self._baseProb(table)
             # TODO check
-            return self._alpha * self._baseProb(table)
+            #return self._alpha * self._baseProb(table)
+            return self._new_table_prob()
 
     def verify(self):
         "Checks that everytime something is added or removed, sum is updated."

@@ -9,7 +9,9 @@ Options:
 
 """
 
-from fast_seg import sample_and_segment
+#from fast_seg import sample_and_segment
+#from fast_seg_colloc import sample_and_segment
+from seg_colloc_2 import sample_and_segment
 from docopt import docopt
 
 

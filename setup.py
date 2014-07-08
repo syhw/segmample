@@ -11,8 +11,10 @@ np_inc = [os.path.join(np_lib, 'core/include')]
 
 setup(
         cmdclass = {'build_ext': build_ext},
-        ext_modules = [Extension("fast_seg", 
-                                 ["fast_seg.pyx"],
+        #ext_modules = [Extension("fast_seg", 
+        #                         ["fast_seg.pyx"],
+        ext_modules = [Extension("fast_seg_colloc", 
+                                 ["fast_seg_colloc.pyx"],
                                  include_dirs=py_inc+np_inc,
                                  extra_compile_args=["-O3"])],
         include_dirs=[numpy.get_include(),
